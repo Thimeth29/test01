@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherGuard Harvest - Anuradhapura Weather</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            background-color: #f4f9f4;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            min-height: calc(100vh - 80px);
+            margin-top: 80px; /* space for fixed header */
+            position: relative;
+            gap: 0;
+            overflow: visible; /* allow fixed child */
+        }
+
+        .left {
+            position: fixed;
+            left: 0;
+            top: 80px; /* same as header height */
+            width: 50%;
+            height: calc(100vh - 80px);
+            background: #e6efe6;
+            z-index: 10;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .right {
+            position: fixed;
+            right: 0;
+            top: 80px;
+            width: 50%;
+            height: calc(100vh - 80px);
+            overflow-y: auto; /* scroll inside panel only */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(to bottom, #a8e063, #56ab2f);
+            color: #ffffff;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .panel,
+        .forecast-section {
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            max-width: 420px;
+            width: 100%;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .controls label {
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .controls select {
+            padding: 12px 14px;
+            border: 2px solid rgba(255,255,255,0.7);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.95);
+            color: #1d2b21;
+            font-size: 1rem;
+        }
+
+        .forecast-card { 
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        h1 { font-size: 2.1em; margin-bottom: 12px; line-height: 1.2; }
+        h2 { font-size: 1.4em; margin-bottom: 10px; }
+        .weather-icon { font-size: 4em; margin-bottom: 12px; }
+        .detail { margin: 6px 0; }
+        .forecast-day { font-size: 0.95em; }
+
+        /* Fixed header bar reuse */
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background-color: #388659; }
+        footer { margin-top: 20px; padding: 20px; text-align: center; background: #f4f9f4; }
+
+        /* High-contrast mode when gradient is bright */
+        .right.dark-text { color: #102a14; }
+        .right.dark-text h1,
+        .right.dark-text h2,
+        .right.dark-text .detail,
+        .right.dark-text label { color: #102a14; }
+        .right.dark-text .panel,
+        .right.dark-text .forecast-section { background: rgba(255,255,255,0.97); border-color: rgba(0,0,0,0.06); }
+        .right.dark-text .controls select { border-color: rgba(0,0,0,0.2); background: #ffffff; color: #102a14; }
+
+        /* Mobile */
+        @media (max-width: 900px) {
+            .container { flex-direction: column; margin-top: 120px; }
+            .left { position: relative; left: auto; top: auto; width: 100%; height: 360px; }
+            .right { position: relative; right: auto; top: auto; width: 100%; height: auto; overflow: visible; padding: 16px; }
+            .panel, .forecast-section { max-width: 100%; }
+        }
+
+        /* Leaflet fix */
+        .leaflet-container { height: 100% !important; width: 100% !important; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav aria-label="Main navigation">
+            <div class="logo">WeatherGuard Harvest</div>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('weather') }}" aria-current="page">Weather</a></li>
+                {% if user.is_authenticated %}
+                    <li>
+                        <div class="user-menu">
+                            <span>{{ user.username }}</span>
+                            <ul>
+                                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+                                <li><a href="{{ url_for('settings') }}">Settings</a></li>
+                                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                    <li><a href="{{ url_for('signup') }}">Signup</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('support') }}">Support</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    {% if greeting %}
+        <h1 class="welcome-greeting">{{ greeting }}, {{ user.username }}!</h1>
+    {% endif %}
+
+    <div class="container">
+        <div class="left">
+            <div id="map"></div>
+        </div>
+        <div class="right" id="right-panel">
+            <div class="panel">
+                <div class="controls">
+                    <label for="city-select">Location</label>
+                    <select id="city-select" onchange="searchCity()">
+                        <option value="">Select a city</option>
+                        <option value="Anuradhapura">Anuradhapura</option>
+                        <option value="Mihintale">Mihintale</option>
+                        <option value="Kekirawa">Kekirawa</option>
+                        <option value="Medawachchiya">Medawachchiya</option>
+                        <option value="Habarana">Habarana</option>
+                        <option value="Eppawala">Eppawala</option>
+                        <option value="Galenbindunuwewa">Galenbindunuwewa</option>
+                        <option value="Galnewa">Galnewa</option>
+                        <option value="Horowupotana">Horowupotana</option>
+                        <option value="Kahatagasdigiliya">Kahatagasdigiliya</option>
+                        <option value="Bulnewa">Bulnewa</option>
+                        <option value="Ganewalpola">Ganewalpola</option>
+                    </select>
+                </div>
+                <h1 id="city-name">Select a Location</h1>
+                <div class="weather-icon" id="weather-icon">🌤️</div>
+                <p class="detail" id="temperature">Temperature: -- °C</p>
+                <p class="detail" id="humidity">Humidity: -- %</p>
+                <p class="detail" id="wind-speed">Wind Speed: -- km/h</p>
+                <p class="detail" id="rainfall">Rainfall: -- mm</p>
+                <p class="detail" id="condition">Condition: --</p>
+            </div>
+            <div class="panel">
+                <div class="controls">
+                    <label for="forecast-select">Forecast</label>
+                    <select id="forecast-select" onchange="updateForecastDisplay()">
+                        <option value="weekly">7-Day Forecast</option>
+                        <option value="climate">3-Month Climate Outlook</option>
+                    </select>
+                </div>
+            </div>
+            <div class="forecast-section" id="forecast-container">
+                <h2 id="forecast-title">7-Day Forecast</h2>
+                <div id="forecast-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 WeatherGuard Harvest. All rights reserved.</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // Default locations in Anuradhapura region
+        const defaultLocations = [
+            { name: "Anuradhapura", lat: 8.3114, lon: 80.4037 },
+            { name: "Mihintale", lat: 8.3500, lon: 80.5167 },
+            { name: "Kekirawa", lat: 8.0333, lon: 80.5833 },
+            { name: "Medawachchiya", lat: 8.5333, lon: 80.3167 },
+            { name: "Habarana", lat: 8.0322, lon: 80.7519 },
+            { name: "Eppawala", lat: 8.1456, lon: 80.4048 },
+            { name: "Galenbindunuwewa", lat: 8.1167, lon: 80.4500 },
+            { name: "Galnewa", lat: 8.2027, lon: 80.3609 },
+            { name: "Horowupotana", lat: 8.5593, lon: 80.8350 },
+            { name: "Kahatagasdigiliya", lat: 8.4229, lon: 80.6937 },
+            { name: "Bulnewa", lat: 8.1243, lon: 80.4107 },
+            { name: "Ganewalpola", lat: 8.0876, lon: 80.6279 }
+        ];
+
+        // Initialize map
+        const map = L.map('map').setView([8.3, 80.5], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        const weatherMap = {
+            0: { desc: "Clear sky", icon: "☀️", gradient: "linear-gradient(to bottom, #ffd700, #fff8dc)", text: 'dark' },
+            1: { desc: "Mainly clear", icon: "🌤️", gradient: "linear-gradient(to bottom, #87ceeb, #fff)", text: 'dark' },
+            2: { desc: "Partly cloudy", icon: "⛅", gradient: "linear-gradient(to bottom, #b0c4de, #fff)", text: 'dark' },
+            3: { desc: "Overcast", icon: "☁️", gradient: "linear-gradient(to bottom, #a9a9a9, #d3d3d3)", text: 'dark' },
+            61:{ desc: "Light rain", icon: "🌧️", gradient: "linear-gradient(to bottom, #4682b4, #add8e6)", text: 'dark' },
+            63:{ desc: "Moderate rain", icon: "🌧️", gradient: "linear-gradient(to bottom, #4169e1, #87cefa)", text: 'dark' },
+            65:{ desc: "Heavy rain", icon: "🌧️", gradient: "linear-gradient(to bottom, #00008b, #4682b4)", text: 'light' },
+            95:{ desc: "Thunderstorm", icon: "⛈️", gradient: "linear-gradient(to bottom, #4b0082, #9370db)", text: 'light' }
+        };
+
+        async function getCurrentWeather(lat, lon) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&timezone=Asia/Colombo`;
+            const res = await fetch(url); const data = await res.json();
+            return data.current;
+        }
+        async function getWeeklyForecast(lat, lon) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&timezone=Asia/Colombo&forecast_days=7`;
+            const res = await fetch(url); const data = await res.json();
+            return data.daily;
+        }
+        async function getClimateOutlook(lat, lon) {
+            const today = new Date().toISOString().split('T')[0];
+            const d = new Date(); d.setMonth(d.getMonth()-3);
+            const start = d.toISOString().split('T')[0];
+            const url = `https://climate-api.open-meteo.com/v1/climate?latitude=${lat}&longitude=${lon}&start_date=${start}&end_date=${today}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`;
+            const res = await fetch(url); const data = await res.json();
+            return data.daily;
+        }
+        function processClimateData(climate) {
+            const months = {}; const out = [];
+            climate.time.forEach((t,i)=>{
+                const mk = new Date(t).toLocaleString('default',{month:'long',year:'numeric'});
+                (months[mk] ||= {max:[],min:[],p:[]});
+                months[mk].max.push(climate.temperature_2m_max[i]);
+                months[mk].min.push(climate.temperature_2m_min[i]);
+                months[mk].p.push(climate.precipitation_sum[i]);
+            });
+            for(const m in months){
+                const d=months[m];
+                out.push({month:m, avgMax:(d.max.reduce((a,b)=>a+b,0)/d.max.length).toFixed(1), avgMin:(d.min.reduce((a,b)=>a+b,0)/d.min.length).toFixed(1), totalPrecip:(d.p.reduce((a,b)=>a+b,0)).toFixed(1)});
+            }
+            return out;
+        }
+
+        const markers = {};
+        defaultLocations.forEach(addMarker);
+
+        async function addMarker(loc){
+            const weather = await getCurrentWeather(loc.lat, loc.lon);
+            const info = weatherMap[weather.weather_code] || {desc:'Unknown',icon:'❓',gradient:'linear-gradient(to bottom, #ccc, #eee)',text:'dark'};
+            const marker = L.marker([loc.lat, loc.lon], { icon: L.divIcon({ html:`<span style="font-size: 2em;">${info.icon}</span>`, className:'weather-marker' })}).addTo(map);
+            markers[loc.name]=marker;
+            marker.bindPopup(`${loc.name}<br>${info.desc}<br>Temp: ${weather.temperature_2m} °C`);
+            marker.on('click', ()=> selectCity(loc));
+        }
+
+        let currentWeekly=null, currentClimate=null;
+        async function selectCity(loc){
+            document.getElementById('city-select').value = loc.name;
+            const weather = await getCurrentWeather(loc.lat, loc.lon);
+            const info = weatherMap[weather.weather_code] || {desc:'Unknown',icon:'❓',gradient:'linear-gradient(to bottom, #ccc, #eee)',text:'dark'};
+            currentWeekly = await getWeeklyForecast(loc.lat, loc.lon);
+            currentClimate = processClimateData(await getClimateOutlook(loc.lat, loc.lon));
+            updatePanel(loc.name, weather, info);
+            map.setView([loc.lat, loc.lon], 12);
+        }
+
+        async function searchCity(){
+            const name = document.getElementById('city-select').value;
+            if(!name) return;
+            const loc = defaultLocations.find(l=>l.name===name);
+            if(loc) await selectCity(loc);
+        }
+
+        function updateForecastDisplay(){
+            const type = document.getElementById('forecast-select').value;
+            const content = document.getElementById('forecast-content');
+            const title = document.getElementById('forecast-title');
+            content.innerHTML='';
+            if(type==='weekly' && currentWeekly){
+                title.textContent='7-Day Forecast';
+                currentWeekly.time.forEach((t,i)=>{
+                    const code=currentWeekly.weather_code[i];
+                    const d=weatherMap[code]||{desc:'Unknown',icon:'❓'};
+                    const card=document.createElement('div');
+                    card.className='forecast-card';
+                    card.innerHTML=`<p class="forecast-day">${new Date(t).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}: ${d.icon} ${d.desc}</p>
+                    <p class="forecast-day">${currentWeekly.temperature_2m_max[i]}°/${currentWeekly.temperature_2m_min[i]}°C, ${currentWeekly.precipitation_sum[i]} mm</p>`;
+                    content.appendChild(card);
+                });
+            } else if(type==='climate' && currentClimate){
+                title.textContent='3-Month Climate Outlook';
+                currentClimate.forEach(m=>{
+                    const card=document.createElement('div');
+                    card.className='forecast-card';
+                    card.innerHTML=`<p class="forecast-day">${m.month}</p>
+                    <p class="forecast-day">${m.avgMax}°/${m.avgMin}°C, ${m.totalPrecip} mm</p>`;
+                    content.appendChild(card);
+                });
+            }
+        }
+
+        function updatePanel(name, weather, info){
+            document.getElementById('city-name').textContent=name;
+            document.getElementById('weather-icon').textContent=info.icon;
+            document.getElementById('temperature').textContent=`Temperature: ${weather.temperature_2m} °C`;
+            document.getElementById('humidity').textContent=`Humidity: ${weather.relative_humidity_2m} %`;
+            document.getElementById('wind-speed').textContent=`Wind Speed: ${weather.wind_speed_10m} km/h`;
+            document.getElementById('rainfall').textContent=`Rainfall: ${weather.precipitation} mm`;
+            document.getElementById('condition').textContent=`Condition: ${info.desc}`;
+            const right=document.getElementById('right-panel');
+            right.style.background=info.gradient;
+            if(info.text==='dark'){ right.classList.add('dark-text'); } else { right.classList.remove('dark-text'); }
+            updateForecastDisplay();
+        }
+
+        // Resize handlers
+        window.addEventListener('resize',()=> setTimeout(()=>map.invalidateSize(),100));
+        window.addEventListener('orientationchange',()=> setTimeout(()=>map.invalidateSize(),300));
+        document.addEventListener('DOMContentLoaded',()=> setTimeout(()=>map.invalidateSize(),100));
+    </script>
+</body>
+</html>

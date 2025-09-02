@@ -1,0 +1,11 @@
+MAN IMAGE PLACEHOLDER
+
+Replace this file with your actual man.jpg image file.
+
+Recommended specifications:
+- Format: JPG/JPEG
+- Resolution: 1000x400 pixels or higher
+- Aspect ratio: 2.5:1 (landscape)
+- File size: Under 500KB for optimal loading
+- Content: Professional farmer or agricultural expert
+- File name: man.jpg (place in static/images/ folder)

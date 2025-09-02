@@ -1,0 +1,201 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherGuard Harvest</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <nav aria-label="Main navigation">
+            <div class="logo">WeatherGuard Harvest</div>
+            <ul>
+                <li><a href="{{ url_for('home') }}" aria-current="page">Home</a></li>
+                <li><a href="{{ url_for('weather') }}">Weather</a></li>
+                {% if user.is_authenticated %}
+                    <li>
+                        <div class="user-menu">
+                            <span>{{ user.username }}</span>
+                            <ul>
+                                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+                                <li><a href="{{ url_for('settings') }}">Settings</a></li>
+                                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                    <li><a href="{{ url_for('signup') }}">Signup</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('support') }}">Support</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    {% if greeting %}
+        <h1 class="welcome-greeting">{{ greeting }}, {{ user.username }}!</h1>
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <!-- Hero Section - Same for both users -->
+        <section class="hero">
+            <h1>Deliver Sustainable Soy Solutions to Every Life, Every Day</h1>
+            <p>Get real-time weather, crop tips & instant alertsall in one place.</p>
+            <a href="{% if user.is_authenticated %}{{ url_for('weather') }}{% else %}{{ url_for('signup') }}{% endif %}" class="btn">
+                {% if user.is_authenticated %}Check Weather Now{% else %}Join Now{% endif %}
+            </a>
+        </section>
+
+        <!-- Features Section - Consistent layout, different content -->
+        <section class="features">
+            <h2>{% if user.is_authenticated %}Your Farming Dashboard{% else %}Key Features{% endif %}</h2>
+            <p>{% if user.is_authenticated %}Welcome back! Check the latest weather updates and explore tools for crop planning.{% else %}Discover how our tools help farmers thrive with real-time weather insights.{% endif %}</p>
+            
+            <div class="features-grid">
+                {% if user.is_authenticated %}
+                    <!-- Logged-in user features -->
+                    <div class="feature-box">
+                        <h3>Weather Forecast</h3>
+                        <p>Access real-time weather data for all 12 cities in the Anuradhapura region.</p>
+                        <a href="{{ url_for('weather') }}" class="feature-link">View Weather</a>
+                    </div>
+                    <div class="feature-box">
+                        <h3>Smart Analytics</h3>
+                        <p>Get insights for crop planning, fertilizer optimization, and yield prediction.</p>
+                        <div class="analytics-buttons">
+                            <a href="{{ url_for('cost_profit_analysis') }}" class="analytics-btn">Cost-Profit Tool</a>
+                            <a href="{{ url_for('analytics') }}" class="analytics-btn">Future Analyse</a>
+                        </div>
+                    </div>
+                    <div class="feature-box">
+                        <h3>SMS Alerts</h3>
+                        <p>Get SMS updates on market trends, rain alerts, and more directly to your phone.</p>
+                        <a href="{{ url_for('support') }}" class="feature-link">Learn More</a>
+                    </div>
+                {% else %}
+                    <!-- Non-logged-in user features -->
+                    <div class="feature-box">
+                        <h3>Weather Forecast</h3>
+                        <p>Stay updated on local weather to plan your farming activities smartly.</p>
+                        <a href="{{ url_for('signup') }}" class="feature-link">Get Started</a>
+                    </div>
+                    <div class="feature-box">
+                        <h3>Smart Analytics</h3>
+                        <p>Get insights for crop planning, fertilizer optimization, and yield prediction.</p>
+                        <a href="{{ url_for('signup') }}" class="feature-link">Join Now</a>
+                    </div>
+                    <div class="feature-box">
+                        <h3>SMS Alerts</h3>
+                        <p>Get SMS updates on market trends, rain alerts, and more directly to your phone.</p>
+                        <a href="{{ url_for('signup') }}" class="feature-link">Sign Up</a>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Weather Search Section - Only for logged-in users -->
+        {% if user.is_authenticated %}
+            <section class="search-section">
+                <h2>Quick Weather Check</h2>
+                <form method="POST" action="{{ url_for('home') }}">
+                    <select name="city" required>
+                        <option value="" disabled selected>Select a city</option>
+                        <option value="Anuradhapura">Anuradhapura</option>
+                        <option value="Mihintale">Mihintale</option>
+                        <option value="Kekirawa">Kekirawa</option>
+                        <option value="Medawachchiya">Medawachchiya</option>
+                        <option value="Habarana">Habarana</option>
+                        <option value="Eppawala">Eppawala</option>
+                        <option value="Galenbindunuwewa">Galenbindunuwewa</option>
+                        <option value="Galnewa">Galnewa</option>
+                        <option value="Horowupotana">Horowupotana</option>
+                        <option value="Kahatagasdigiliya">Kahatagasdigiliya</option>
+                        <option value="Bulnewa">Bulnewa</option>
+                        <option value="Ganewalpola">Ganewalpola</option>
+                    </select>
+                    <button type="submit">Get Weather</button>
+                </form>
+            </section>
+
+            <!-- Weather Results - Only for logged-in users -->
+            {% if search_result %}
+                <section class="weather-container">
+                    <h2>Current Weather</h2>
+                    <div class="forecast-card">
+                        <h3>Current Conditions</h3>
+                        <p><span class="weather-icon {{ weather_code_to_icon(search_result.current.weather_code) }}"></span>
+                           Condition: {{ search_result.current.weather_code | weather_code_to_text }}</p>
+                        <p>Temperature: {{ search_result.current.temperature_2m }} °C</p>
+                        <p>Humidity: {{ search_result.current.relative_humidity_2m }} %</p>
+                        <p>Wind Speed: {{ search_result.current.wind_speed_10m }} km/h</p>
+                        <p>Rainfall: {{ search_result.current.precipitation }} mm</p>
+                    </div>
+                </section>
+            {% endif %}
+        {% endif %}
+
+
+
+        <!-- Feedback Section with Man Picture - Same for both users -->
+        <section class="feedback-section">
+            <h2>Farmer Feedback: Before and After</h2>
+            <div class="feedback-with-photo-container">
+                <div class="feedback-cards-vertical">
+                    <div class="feedback-card">
+                        <h3>Sunil Perera - Anuradhapura</h3>
+                        <p><strong>Before:</strong> "I struggled to plan planting due to unpredictable weather, often losing crops to sudden rains."</p>
+                    </div>
+                    <div class="feedback-card">
+                        <h3>Kamal Wijesinghe - Kekirawa</h3>
+                        <p><strong>Before:</strong> "Market price changes caught me off guard, affecting my profits."</p>
+                    </div>
+                </div>
+                <div class="man-photo-vertical">
+                    <div class="man-picture-container">
+                        <img src="{{ url_for('static', filename='images/man.jpg') }}" alt="Professional Farmer" class="man-picture">
+                        <div class="man-picture-overlay">
+                            <h3>Expert Agricultural Guidance</h3>
+                            <p>Our team of experienced agricultural experts provides personalized guidance to help you maximize your farming success.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Call to Action Section - Different for each user type -->
+        <section class="cta-section">
+            {% if user.is_authenticated %}
+                <h2>Ready to Plan Your Next Harvest?</h2>
+                <p>Access advanced weather forecasting and agricultural tools to maximize your yield.</p>
+                <div class="cta-buttons">
+                    <a href="{{ url_for('weather') }}" class="btn btn-primary">View Weather Map</a>
+                    <a href="{{ url_for('support') }}" class="btn btn-secondary">Get Support</a>
+                </div>
+            {% else %}
+                <h2>Join Thousands of Successful Farmers</h2>
+                <p>Start your journey towards better farming decisions with WeatherGuard Harvest.</p>
+                <div class="cta-buttons">
+                    <a href="{{ url_for('signup') }}" class="btn btn-primary">Create Account</a>
+                    <a href="{{ url_for('login') }}" class="btn btn-secondary">Sign In</a>
+                </div>
+            {% endif %}
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 WeatherGuard Harvest. All rights reserved.</p>
+    </footer>
+
+
+</body>
+</html>

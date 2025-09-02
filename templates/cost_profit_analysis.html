@@ -1,0 +1,891 @@
+<!-- templates/cost_profit_analysis.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cost-Profit Analysis Tool - WeatherGuard Harvest</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background-image: url('/static/images/plant.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+        
+        .analysis-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .analysis-title {
+            text-align: center;
+            color: #388659;
+            margin-bottom: 40px;
+            font-size: 2.8em;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .analysis-block {
+            background: #ffffff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .analysis-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #52AA8A, #a8e063);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .analysis-block:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .analysis-block:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+        
+        .analysis-block.calculated {
+            background: linear-gradient(135deg, #e8d5ff, #f3e8ff);
+            border: 2px solid #9333ea;
+            box-shadow: 0 8px 25px rgba(147, 51, 234, 0.2);
+        }
+        
+        .block-title {
+            color: #388659;
+            font-size: 1.6em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 2px solid #52AA8A;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #52AA8A;
+            box-shadow: 0 0 10px rgba(82, 170, 138, 0.3);
+            background: #ffffff;
+        }
+        
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #52AA8A, #388659);
+            color: white;
+            box-shadow: 0 4px 15px rgba(82, 170, 138, 0.3);
+        }
+        
+        .action-btn:hover {
+            background: linear-gradient(135deg, #388659, #2d5a40);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(82, 170, 138, 0.4);
+        }
+        
+        .action-btn:active {
+            transform: translateY(0);
+        }
+        
+        .action-btn.secondary {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+        
+        .action-btn.secondary:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+        }
+        
+        .action-btn.tertiary {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+        }
+        
+        .action-btn.tertiary:hover {
+            background: linear-gradient(135deg, #8e44ad, #7d3c98);
+            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+        }
+        
+        .result-display {
+            background: linear-gradient(135deg, #e8f5e8, #d4edda);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 5px solid #27ae60;
+            backdrop-filter: blur(5px);
+            animation: slideIn 0.5s ease;
+        }
+        
+        .result-display h4 {
+            color: #27ae60;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+            font-weight: 700;
+        }
+        
+        .result-amount {
+            font-size: 2em;
+            font-weight: 900;
+            color: #2c3e50;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .profit-positive {
+            color: #27ae60;
+        }
+        
+        .profit-negative {
+            color: #e74c3c;
+        }
+        
+        .result-status {
+            margin-top: 10px;
+            font-size: 1.2em;
+        }
+        
+        .subsequent-costs {
+            background: rgba(248, 249, 250, 0.9);
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .subsequent-costs h5 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 1em;
+        }
+        
+        .subsequent-costs-display {
+            margin-bottom: 15px;
+        }
+        
+        .subsequent-cost-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .subsequent-cost-item:last-child {
+            border-bottom: none;
+        }
+        
+        .subsequent-cost-value {
+            font-weight: 600;
+            color: #388659;
+        }
+        
+        .remove-cost-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .remove-cost-btn:hover {
+            background: #c0392b;
+        }
+        
+        .subsequent-total {
+            padding: 10px 0;
+            border-top: 2px solid #52AA8A;
+            margin-top: 10px;
+            text-align: right;
+            color: #388659;
+        }
+            font-weight: 600;
+        }
+        
+        .back-btn {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        .back-btn:hover {
+            background: linear-gradient(135deg, #495057, #343a40);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
+        }
+        
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(82, 170, 138, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(82, 170, 138, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(82, 170, 138, 0);
+            }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .analysis-container {
+                margin: 20px auto;
+                padding: 20px;
+            }
+            
+            .analysis-title {
+                font-size: 2.2em;
+            }
+            
+            .analysis-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .analysis-block {
+                padding: 20px;
+            }
+            
+            .block-title {
+                font-size: 1.4em;
+            }
+            
+            .result-amount {
+                font-size: 1.5em;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .analysis-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            .analysis-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .action-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            margin: auto;
+            border: 2px solid transparent;
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav aria-label="Main navigation">
+            <div class="logo">WeatherGuard Harvest</div>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('weather') }}">Weather</a></li>
+                {% if user.is_authenticated %}
+                    <li>
+                        <div class="user-menu">
+                            <span>{{ user.username }}</span>
+                            <ul>
+                                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+                                <li><a href="{{ url_for('settings') }}">Settings</a></li>
+                                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                {% else %}
+                    <li><a href="{{ url_for('login') }}">Login</a></li>
+                    <li><a href="{{ url_for('signup') }}">Signup</a></li>
+                {% endif %}
+                <li><a href="{{ url_for('support') }}">Support</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <main>
+        <div class="analysis-container">
+            <h1 class="analysis-title">Cost-Profit Analysis Tool</h1>
+            
+            <div class="analysis-grid">
+                <!-- Block 1: Calculate Cost -->
+                <div class="analysis-block" id="cost-block">
+                    <h3 class="block-title">Calculate Cost</h3>
+                    
+                    <div class="form-group">
+                        <label for="initial_cost">Add Initial Cost (Rs.)</label>
+                        <input type="number" 
+                               id="initial_cost" 
+                               class="form-input" 
+                               step="0.01" 
+                               min="0" 
+                               placeholder="Enter initial cost"
+                               onchange="setInitialCost()">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subsequent_cost">Add Subsequent Cost (Rs.)</label>
+                        <input type="number" 
+                               id="subsequent_cost" 
+                               class="form-input" 
+                               step="0.01" 
+                               min="0" 
+                               placeholder="Enter subsequent cost">
+                        <button class="action-btn secondary" onclick="addSubsequentCost()" style="margin-top: 10px;">
+                            Add Cost
+                        </button>
+                    </div>
+                    
+                    <div id="subsequent-costs-list" style="display: none;">
+                        <div class="subsequent-costs">
+                            <h5 style="color: #666; margin: 10px 0;">Subsequent Costs:</h5>
+                            <div id="subsequent-costs-display"></div>
+                            <div class="subsequent-total">
+                                <strong>Subsequent Total: <span id="subsequent-total-amount">Rs. 0.00</span></strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="action-btn" onclick="calculateTotalCost()">
+                        Calculate Total Cost
+                    </button>
+                    
+                    <button class="action-btn secondary" onclick="resetCostBlock()" style="margin-top: 10px;">
+                        Reset Costs
+                    </button>
+                    
+                    <div id="cost-result" style="display: none;">
+                        <div class="result-display">
+                            <h4>Total Cost:</h4>
+                            <div class="result-amount" id="total-cost-amount">Rs. 0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Block 2: Calculate Revenue -->
+                <div class="analysis-block" id="revenue-block">
+                    <h3 class="block-title">Calculate Revenue</h3>
+                    
+                    <div class="form-group">
+                        <label for="market_price">Enter Current Market Price (Rs./kg)</label>
+                        <input type="number" 
+                               id="market_price" 
+                               class="form-input" 
+                               step="0.01" 
+                               min="0" 
+                               placeholder="Enter market price per kg">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="harvest_kg">Enter Harvest (kg)</label>
+                        <input type="number" 
+                               id="harvest_kg" 
+                               class="form-input" 
+                               step="0.01" 
+                               min="0" 
+                               placeholder="Enter harvest weight in kg">
+                    </div>
+                    
+                    <button class="action-btn" onclick="calculateRevenue()">
+                        Calculate Revenue
+                    </button>
+                    
+                    <div id="revenue-result" style="display: none;">
+                        <div class="result-display">
+                            <h4>Total Revenue:</h4>
+                            <div class="result-amount" id="total-revenue-amount">Rs. 0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Block 3: Profit -->
+                <div class="analysis-block" id="profit-block">
+                    <h3 class="block-title">Profit</h3>
+                    
+                    <button class="action-btn" onclick="calculateProfit()">
+                        Calculate Profit
+                    </button>
+                    
+                    <button class="action-btn secondary" onclick="generateReport()">
+                        Take a Report
+                    </button>
+                    
+                    <button class="action-btn tertiary" onclick="addToAnalysis()">
+                        Add to Analysis
+                    </button>
+                    
+                    <div id="profit-result" style="display: none;">
+                        <div class="result-display">
+                            <h4>Net Profit:</h4>
+                            <div class="result-amount" id="profit-amount">Rs. 0.00</div>
+                            <div class="result-status" id="profit-status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="{{ url_for('home') }}" class="back-btn">← Back to Home</a>
+        </div>
+    </main>
+
+    <script>
+        // Global variables to store calculated values
+        let totalCost = 0;
+        let totalRevenue = 0;
+        let netProfit = 0;
+        let marketPrice = 0;
+        let harvestAmount = 0;
+        let initialCost = 0;
+        let subsequentCosts = [];
+        let subsequentCostsTotal = 0;
+
+        function setInitialCost() {
+            const input = document.getElementById('initial_cost');
+            const value = parseFloat(input.value) || 0;
+            
+            if (value > 0) {
+                initialCost = value;
+                input.disabled = true;
+                input.style.backgroundColor = '#f8f9fa';
+                input.style.cursor = 'not-allowed';
+                
+                // Show success message
+                const label = input.previousElementSibling;
+                label.innerHTML = 'Initial Cost (Rs.) ✅ <small style="color: #27ae60;">Set</small>';
+                
+                updateSubsequentCostsDisplay();
+            }
+        }
+        
+        function addSubsequentCost() {
+            const input = document.getElementById('subsequent_cost');
+            const value = parseFloat(input.value) || 0;
+            
+            if (value <= 0) {
+                alert('Please enter a valid cost amount.');
+                return;
+            }
+            
+            // Add to subsequent costs array
+            subsequentCosts.push(value);
+            subsequentCostsTotal += value;
+            
+            // Clear input
+            input.value = '';
+            
+            // Update display
+            updateSubsequentCostsDisplay();
+            
+            // Show success message
+            const label = input.previousElementSibling;
+            label.innerHTML = 'Add Subsequent Cost (Rs.) ✅ <small style="color: #27ae60;">Added</small>';
+            
+            // Reset label after 2 seconds
+            setTimeout(() => {
+                label.innerHTML = 'Add Subsequent Cost (Rs.)';
+            }, 2000);
+        }
+        
+        function removeSubsequentCost(index) {
+            const removedCost = subsequentCosts.splice(index, 1)[0];
+            subsequentCostsTotal -= removedCost;
+            updateSubsequentCostsDisplay();
+        }
+        
+        function updateSubsequentCostsDisplay() {
+            const container = document.getElementById('subsequent-costs-display');
+            const totalElement = document.getElementById('subsequent-total-amount');
+            const listContainer = document.getElementById('subsequent-costs-list');
+            
+            if (subsequentCosts.length === 0) {
+                listContainer.style.display = 'none';
+                return;
+            }
+            
+            listContainer.style.display = 'block';
+            
+            // Clear existing display
+            container.innerHTML = '';
+            
+            // Add each subsequent cost
+            subsequentCosts.forEach((cost, index) => {
+                const costItem = document.createElement('div');
+                costItem.className = 'subsequent-cost-item';
+                costItem.innerHTML = `
+                    <span class="subsequent-cost-value">Rs. ${cost.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                    <button class="remove-cost-btn" onclick="removeSubsequentCost(${index})">Remove</button>
+                `;
+                container.appendChild(costItem);
+            });
+            
+            // Update total
+            totalElement.textContent = `Rs. ${subsequentCostsTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+        }
+        
+        function calculateTotalCost() {
+            if (initialCost === 0 && subsequentCosts.length === 0) {
+                alert('Please add at least one cost value (initial or subsequent).');
+                return;
+            }
+            
+            totalCost = initialCost + subsequentCostsTotal;
+            
+            // Update display
+            document.getElementById('total-cost-amount').textContent = `Rs. ${totalCost.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('cost-result').style.display = 'block';
+            
+            // Update block styling
+            const block = document.getElementById('cost-block');
+            block.classList.add('calculated');
+            block.classList.add('pulse');
+            setTimeout(() => block.classList.remove('pulse'), 2000);
+            
+            // Animate result appearance
+            const result = document.getElementById('cost-result');
+            result.style.opacity = '0';
+            result.style.transform = 'translateY(20px)';
+            result.style.display = 'block';
+            
+            setTimeout(() => {
+                result.style.transition = 'all 0.5s ease';
+                result.style.opacity = '1';
+                result.style.transform = 'translateY(0)';
+            }, 100);
+        }
+        
+        function resetCostBlock() {
+            // Reset all cost variables
+            initialCost = 0;
+            subsequentCosts = [];
+            subsequentCostsTotal = 0;
+            totalCost = 0;
+            
+            // Reset initial cost input
+            const initialInput = document.getElementById('initial_cost');
+            initialInput.value = '';
+            initialInput.disabled = false;
+            initialInput.style.backgroundColor = '';
+            initialInput.style.cursor = '';
+            
+            // Reset initial cost label
+            const initialLabel = initialInput.previousElementSibling;
+            initialLabel.innerHTML = 'Add Initial Cost (Rs.)';
+            
+            // Reset subsequent cost input
+            document.getElementById('subsequent_cost').value = '';
+            
+            // Reset subsequent cost label
+            const subsequentLabel = document.getElementById('subsequent_cost').previousElementSibling;
+            subsequentLabel.innerHTML = 'Add Subsequent Cost (Rs.)';
+            
+            // Hide displays
+            document.getElementById('subsequent-costs-list').style.display = 'none';
+            document.getElementById('cost-result').style.display = 'none';
+            
+            // Remove calculated styling
+            const block = document.getElementById('cost-block');
+            block.classList.remove('calculated');
+            
+            // Show success message
+            alert('Cost block has been reset successfully!');
+        }
+
+        function calculateRevenue() {
+            marketPrice = parseFloat(document.getElementById('market_price').value) || 0;
+            harvestAmount = parseFloat(document.getElementById('harvest_kg').value) || 0;
+            
+            if (marketPrice === 0 || harvestAmount === 0) {
+                alert('Please enter both market price and harvest amount.');
+                return;
+            }
+            
+            totalRevenue = marketPrice * harvestAmount;
+            
+            // Update display
+            document.getElementById('total-revenue-amount').textContent = `Rs. ${totalRevenue.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            document.getElementById('revenue-result').style.display = 'block';
+            
+            // Update block styling
+            const block = document.getElementById('revenue-block');
+            block.classList.add('calculated');
+            block.classList.add('pulse');
+            setTimeout(() => block.classList.remove('pulse'), 2000);
+            
+            // Animate result appearance
+            const result = document.getElementById('revenue-result');
+            result.style.opacity = '0';
+            result.style.transform = 'translateY(20px)';
+            result.style.display = 'block';
+            
+            setTimeout(() => {
+                result.style.transition = 'all 0.5s ease';
+                result.style.opacity = '1';
+                result.style.transform = 'translateY(0)';
+            }, 100);
+        }
+
+        function calculateProfit() {
+            if (totalCost === 0) {
+                alert('Please calculate total cost first.');
+                return;
+            }
+            
+            if (totalRevenue === 0) {
+                alert('Please calculate revenue first.');
+                return;
+            }
+            
+            netProfit = totalRevenue - totalCost;
+            
+            // Update display
+            const profitAmountElement = document.getElementById('profit-amount');
+            const profitStatusElement = document.getElementById('profit-status');
+            
+            profitAmountElement.textContent = `Rs. ${netProfit.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+            
+            if (netProfit >= 0) {
+                profitAmountElement.className = 'result-amount profit-positive';
+                profitStatusElement.textContent = '✅ Profitable Business!';
+                profitStatusElement.className = 'result-status profit-positive';
+            } else {
+                profitAmountElement.className = 'result-amount profit-negative';
+                profitStatusElement.textContent = '⚠️ Loss Incurred';
+                profitStatusElement.className = 'result-status profit-negative';
+            }
+            
+            document.getElementById('profit-result').style.display = 'block';
+            
+            // Update block styling
+            const block = document.getElementById('profit-block');
+            block.classList.add('calculated');
+            block.classList.add('pulse');
+            setTimeout(() => block.classList.remove('pulse'), 2000);
+            
+            // Animate result appearance
+            const result = document.getElementById('profit-result');
+            result.style.opacity = '0';
+            result.style.transform = 'translateY(20px)';
+            result.style.display = 'block';
+            
+            setTimeout(() => {
+                result.style.transition = 'all 0.5s ease';
+                result.style.opacity = '1';
+                result.style.transform = 'translateY(0)';
+            }, 100);
+        }
+
+        function generateReport() {
+            if (totalCost === 0 || totalRevenue === 0 || netProfit === null) {
+                alert('Please complete all calculations before generating a report.');
+                return;
+            }
+            
+            // Show loading state
+            const btn = event.target;
+            btn.classList.add('loading');
+            btn.textContent = 'Generating Report...';
+            
+            // Create form and submit to backend for PDF generation
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ url_for("cost_profit_analysis") }}';
+            
+            // Add data as hidden inputs
+            const inputs = [
+                {name: 'action', value: 'generate_pdf'},
+                {name: 'total_cost', value: totalCost},
+                {name: 'total_revenue', value: totalRevenue},
+                {name: 'net_profit', value: netProfit},
+                {name: 'market_price', value: marketPrice},
+                {name: 'harvest_amount', value: harvestAmount}
+            ];
+            
+            inputs.forEach(input => {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = input.name;
+                hiddenInput.value = input.value;
+                form.appendChild(hiddenInput);
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+            
+            // Reset button after a delay
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                btn.textContent = 'Take a Report';
+                document.body.removeChild(form);
+            }, 3000);
+        }
+
+        function addToAnalysis() {
+            if (totalCost === 0 || totalRevenue === 0 || netProfit === null) {
+                alert('Please complete all calculations before adding to analysis.');
+                return;
+            }
+            
+            // Show loading state
+            const btn = event.target;
+            btn.classList.add('loading');
+            btn.textContent = 'Adding to Analysis...';
+            
+            // Send data to backend for ML model training
+            fetch('{{ url_for("cost_profit_analysis") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'action': 'add_to_ml',
+                    'total_cost': totalCost,
+                    'total_revenue': totalRevenue,
+                    'net_profit': netProfit,
+                    'market_price': marketPrice,
+                    'harvest_amount': harvestAmount
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Data successfully added to analysis! Your information will help improve future predictions.');
+                } else {
+                    alert('❌ Error adding data to analysis: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('❌ Network error occurred while adding data to analysis.');
+            })
+            .finally(() => {
+                // Reset button
+                btn.classList.remove('loading');
+                btn.textContent = 'Add to Analysis';
+            });
+        }
+
+        // Input validation and formatting
+        document.addEventListener('DOMContentLoaded', function() {
+            const numberInputs = document.querySelectorAll('input[type="number"]');
+            
+            numberInputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    if (this.value < 0) {
+                        this.value = 0;
+                    }
+                });
+                
+                input.addEventListener('blur', function() {
+                    if (this.value && !isNaN(this.value)) {
+                        this.value = parseFloat(this.value).toFixed(2);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

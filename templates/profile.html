@@ -1,0 +1,48 @@
+<!-- templates/profile.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - WeatherGuard Harvest</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <nav aria-label="Main navigation">
+            <div class="logo">WeatherGuard Harvest</div>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('weather') }}">Weather</a></li>
+                <li><a href="{{ url_for('support') }}">Support</a></li>
+                <li>
+                    <div class="user-menu">
+                        <span>{{ user.username }}</span>
+                        <ul>
+                            <li><a href="{{ url_for('profile') }}" aria-current="page">Profile</a></li>
+                            <li><a href="{{ url_for('settings') }}">Settings</a></li>
+                            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    {% if greeting %}
+    <h1>{{ greeting }}, {{ user.username }}!</h1>
+    {% endif %}
+
+    <main>
+        <section class="form-container">
+            <h2>{{ user.username }}</h2>
+            <p>Email: {{ user.email }}</p>
+            <a href="{{ url_for('settings') }}" class="weather-btn">Edit Profile</a>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 WeatherGuard Harvest. All rights reserved.</p>
+    </footer>
+</body>
+</html>

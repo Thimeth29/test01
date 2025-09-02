@@ -1,0 +1,68 @@
+<!-- templates/settings.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - WeatherGuard Harvest</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">WeatherGuard Harvest</div>
+            <ul>
+                <li><a href="{{ url_for('home') }}">Home</a></li>
+                <li><a href="{{ url_for('weather') }}">Weather</a></li>
+                <li><a href="{{ url_for('support') }}">Support</a></li>
+                <li>
+                    <div class="user-menu">
+                        <span>{{ user.username }}</span>
+                        <ul>
+                            <li><a href="{{ url_for('profile') }}">Profile</a></li>
+                            <li><a href="{{ url_for('settings') }}">Settings</a></li>
+                            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    {% if greeting %}
+    <h1>{{ greeting }}, {{ user.username }}!</h1>
+    {% endif %}
+
+    <section class="form-container">
+        <h2>Settings</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form method="POST" action="{{ url_for('settings') }}">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                <label for="current_password">Current Password</label>
+                <input type="password" id="current_password" name="current_password" required>
+            </div>
+            <div class="form-group">
+                <label for="new_password">New Password</label>
+                <input type="password" id="new_password" name="new_password" required>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm New Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" required>
+            </div>
+            <button type="submit" class="weather-btn">Update Password</button>
+        </form>
+        <a href="{{ url_for('profile') }}">Back to Profile</a>
+    </section>
+
+    <footer>
+        <p>&copy; 2024 WeatherGuard Harvest. All rights reserved.</p>
+    </footer>
+</body>
+</html>
