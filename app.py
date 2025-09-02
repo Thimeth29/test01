@@ -19,6 +19,13 @@ from reportlab.lib import colors
 from io import BytesIO
 from ml_model import market_predictor
 
+import os
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
+
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback_secure_random_key')  # Use env var
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
